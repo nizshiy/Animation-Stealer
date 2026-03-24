@@ -1,334 +1,172 @@
---[[
-    Animation Stealer (R6) with Full GUI
-    Вор анимации с настройками через графический интерфейс
-]]
-
+local HttpService = game:GetService("HttpService")
 local Players = game:GetService("Players")
-local UserInputService = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local LocalPlayer = Players.LocalPlayer
-local StarterGui = game:GetService("StarterGui")
 
--- Части тела для R6
-local BODY_PARTS = {
-    "Head",
-    "Torso",
-    "Left Arm",
-    "Right Arm",
-    "Left Leg",
-    "Right Leg"
-}
+local lastRecordedData = ""
 
--- Функция для создания главного GUI
-local function createMainGUI()
-    -- Проверяем, есть ли уже GUI
-    local existingGui = LocalPlayer.PlayerGui:FindFirstChild("AnimationStealerGUI")
-    if existingGui then
-        existingGui:Destroy()
-    end
-    
-    local screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "AnimationStealerGUI"
-    screenGui.ResetOnSpawn = false
-    screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-    
-    -- Основной фрейм
-    local mainFrame = Instance.new("Frame")
-    mainFrame.Size = UDim2.new(0, 400, 0, 300)
-    mainFrame.Position = UDim2.new(0.5, -200, 0.5, -150)
-    mainFrame.BackgroundColor3 = Color3.new(0.15, 0.15, 0.15)
-    mainFrame.BorderSizePixel = 2
-    mainFrame.BorderColor3 = Color3.new(0, 1, 0)
-    mainFrame.Active = true
-    mainFrame.Draggable = true
-    mainFrame.Parent = screenGui
-    
-    -- Заголовок
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, 0, 0, 30)
-    title.Position = UDim2.new(0, 0, 0, 0)
-    title.Text = "Animation Stealer v2.0"
-    title.TextColor3 = Color3.new(0, 1, 0)
-    title.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
-    title.Font = Enum.Font.SourceSansBold
-    title.TextSize = 20
-    title.Parent = mainFrame
-    
-    -- Кнопка закрытия
-    local closeBtn = Instance.new("TextButton")
-    closeBtn.Size = UDim2.new(0, 30, 0, 30)
-    closeBtn.Position = UDim2.new(1, -30, 0, 0)
-    closeBtn.Text = "X"
-    closeBtn.TextColor3 = Color3.new(1, 0, 0)
-    closeBtn.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
-    closeBtn.Font = Enum.Font.SourceSansBold
-    closeBtn.TextSize = 20
-    closeBtn.Parent = mainFrame
-    closeBtn.MouseButton1Click:Connect(function()
-        screenGui:Destroy()
-    end)
-    
-    -- Выбор цели
-    local targetLabel = Instance.new("TextLabel")
-    targetLabel.Size = UDim2.new(0, 100, 0, 25)
-    targetLabel.Position = UDim2.new(0, 10, 0, 40)
-    targetLabel.Text = "Цель:"
-    targetLabel.TextColor3 = Color3.new(1, 1, 1)
-    targetLabel.BackgroundTransparency = 1
-    targetLabel.TextXAlignment = Enum.TextXAlignment.Left
-    targetLabel.Parent = mainFrame
-    
-    local targetBox = Instance.new("TextBox")
-    targetBox.Size = UDim2.new(0, 150, 0, 25)
-    targetBox.Position = UDim2.new(0, 60, 0, 40)
-    targetBox.Text = LocalPlayer.Name
-    targetBox.PlaceholderText = "Имя игрока"
-    targetBox.TextColor3 = Color3.new(0, 0, 0)
-    targetBox.BackgroundColor3 = Color3.new(1, 1, 1)
-    targetBox.Parent = mainFrame
-    
-    -- Длительность записи
-    local durationLabel = Instance.new("TextLabel")
-    durationLabel.Size = UDim2.new(0, 100, 0, 25)
-    durationLabel.Position = UDim2.new(0, 10, 0, 75)
-    durationLabel.Text = "Секунд:"
-    durationLabel.TextColor3 = Color3.new(1, 1, 1)
-    durationLabel.BackgroundTransparency = 1
-    durationLabel.TextXAlignment = Enum.TextXAlignment.Left
-    durationLabel.Parent = mainFrame
-    
-    local durationBox = Instance.new("TextBox")
-    durationBox.Size = UDim2.new(0, 150, 0, 25)
-    durationBox.Position = UDim2.new(0, 60, 0, 75)
-    durationBox.Text = "3"
-    durationBox.PlaceholderText = "1-10"
-    durationBox.TextColor3 = Color3.new(0, 0, 0)
-    durationBox.BackgroundColor3 = Color3.new(1, 1, 1)
-    durationBox.Parent = mainFrame
-    
-    -- FPS записи
-    local fpsLabel = Instance.new("TextLabel")
-    fpsLabel.Size = UDim2.new(0, 100, 0, 25)
-    fpsLabel.Position = UDim2.new(0, 10, 0, 110)
-    fpsLabel.Text = "FPS:"
-    fpsLabel.TextColor3 = Color3.new(1, 1, 1)
-    fpsLabel.BackgroundTransparency = 1
-    fpsLabel.TextXAlignment = Enum.TextXAlignment.Left
-    fpsLabel.Parent = mainFrame
-    
-    local fpsBox = Instance.new("TextBox")
-    fpsBox.Size = UDim2.new(0, 150, 0, 25)
-    fpsBox.Position = UDim2.new(0, 60, 0, 110)
-    fpsBox.Text = "30"
-    fpsBox.PlaceholderText = "15-60"
-    fpsBox.TextColor3 = Color3.new(0, 0, 0)
-    fpsBox.BackgroundColor3 = Color3.new(1, 1, 1)
-    fpsBox.Parent = mainFrame
-    
-    -- Формат вывода
-    local formatLabel = Instance.new("TextLabel")
-    formatLabel.Size = UDim2.new(0, 100, 0, 25)
-    formatLabel.Position = UDim2.new(0, 10, 0, 145)
-    formatLabel.Text = "Формат:"
-    formatLabel.TextColor3 = Color3.new(1, 1, 1)
-    formatLabel.BackgroundTransparency = 1
-    formatLabel.TextXAlignment = Enum.TextXAlignment.Left
-    formatLabel.Parent = mainFrame
-    
-    local formatDropdown = Instance.new("TextButton")
-    formatDropdown.Size = UDim2.new(0, 150, 0, 25)
-    formatDropdown.Position = UDim2.new(0, 60, 0, 145)
-    formatDropdown.Text = "Полный (части тела)"
-    formatDropdown.BackgroundColor3 = Color3.new(0.3, 0.3, 0.3)
-    formatDropdown.TextColor3 = Color3.new(1, 1, 1)
-    formatDropdown.Parent = mainFrame
-    
-    -- Статус
-    local statusLabel = Instance.new("TextLabel")
-    statusLabel.Size = UDim2.new(1, -20, 0, 25)
-    statusLabel.Position = UDim2.new(0, 10, 0, 180)
-    statusLabel.Text = "Готов к записи"
-    statusLabel.TextColor3 = Color3.new(0, 1, 0)
-    statusLabel.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
-    statusLabel.Parent = mainFrame
-    
-    -- Кнопка записи
-    local recordBtn = Instance.new("TextButton")
-    recordBtn.Size = UDim2.new(0, 150, 0, 40)
-    recordBtn.Position = UDim2.new(0.5, -75, 1, -50)
-    recordBtn.Text = "НАЧАТЬ ЗАПИСЬ"
-    recordBtn.TextColor3 = Color3.new(1, 1, 1)
-    recordBtn.BackgroundColor3 = Color3.new(0, 0.5, 0)
-    recordBtn.Font = Enum.Font.SourceSansBold
-    recordBtn.TextSize = 18
-    recordBtn.Parent = mainFrame
-    
-    local function startRecording()
-        local targetName = targetBox.Text
-        local duration = tonumber(durationBox.Text) or 3
-        local fps = tonumber(fpsBox.Text) or 30
-        
-        -- Валидация
-        if duration < 1 then duration = 1 end
-        if duration > 10 then duration = 10 end
-        if fps < 15 then fps = 15 end
-        if fps > 60 then fps = 60 end
-        
-        -- Поиск цели
-        local targetPlayer = Players:FindFirstChild(targetName)
-        if not targetPlayer then
-            for _, player in ipairs(Players:GetPlayers()) do
-                if player.Name:lower():find(targetName:lower()) then
-                    targetPlayer = player
-                    break
-                end
-            end
-        end
-        
-        if not targetPlayer then
-            statusLabel.Text = "Игрок не найден!"
-            statusLabel.TextColor3 = Color3.new(1, 0, 0)
-            return
-        end
-        
-        local targetChar = targetPlayer.Character
-        if not targetChar then
-            statusLabel.Text = "Персонаж не загружен!"
-            statusLabel.TextColor3 = Color3.new(1, 0, 0)
-            return
-        end
-        
-        local rootPart = targetChar:FindFirstChild("HumanoidRootPart")
-        if not rootPart then
-            statusLabel.Text = "RootPart не найден!"
-            statusLabel.TextColor3 = Color3.new(1, 0, 0)
-            return
-        end
-        
-        statusLabel.Text = "Запись... 0/" .. duration .. " сек"
-        statusLabel.TextColor3 = Color3.new(1, 1, 0)
-        recordBtn.Visible = false
-        
-        local framesData = {}
-        local totalFrames = duration * fps
-        local frameCount = 0
-        local startTime = tick()
-        
-        local connection
-        connection = RunService.Stepped:Connect(function()
-            frameCount = frameCount + 1
-            local elapsed = tick() - startTime
-            
-            statusLabel.Text = string.format("Запись... %.1f/%d сек", elapsed, duration)
-            
-            if frameCount > totalFrames then
-                connection:Disconnect()
-                showResult(framesData, targetName, duration, fps)
-                screenGui:Destroy()
-                return
-            end
-            
-            local rootCF = rootPart.CFrame
-            local keyframeString = ""
-            
-            for i, partName in ipairs(BODY_PARTS) do
-                local part = targetChar:FindFirstChild(partName)
-                if part then
-                    local relativeCF = rootCF:ToObjectSpace(part.CFrame)
-                    local pos = relativeCF.Position
-                    local rot = relativeCF.Rotation
-                    
-                    keyframeString = keyframeString .. string.format("%s:%.3f:%.3f:%.3f:%.1f:%.1f:%.1f", 
-                        partName, pos.X, pos.Y, pos.Z, rot.X, rot.Y, rot.Z)
-                    
-                    if i < #BODY_PARTS then
-                        keyframeString = keyframeString .. "|"
-                    end
-                end
-            end
-            table.insert(framesData, keyframeString)
-        end)
-    end
-    
-    local function showResult(frames, targetName, duration, fps)
-        local resultGui = Instance.new("ScreenGui")
-        resultGui.Name = "AnimationResultGUI"
-        resultGui.ResetOnSpawn = false
-        resultGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-        
-        local resultFrame = Instance.new("Frame")
-        resultFrame.Size = UDim2.new(0, 600, 0, 500)
-        resultFrame.Position = UDim2.new(0.5, -300, 0.5, -250)
-        resultFrame.BackgroundColor3 = Color3.new(0.15, 0.15, 0.15)
-        resultFrame.BorderSizePixel = 2
-        resultFrame.BorderColor3 = Color3.new(0, 1, 0)
-        resultFrame.Active = true
-        resultFrame.Draggable = true
-        resultFrame.Parent = resultGui
-        
-        local title = Instance.new("TextLabel")
-        title.Size = UDim2.new(1, 0, 0, 30)
-        title.Text = string.format("Анимация игрока %s (%d сек, %d fps)", targetName, duration, fps)
-        title.TextColor3 = Color3.new(0, 1, 0)
-        title.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
-        title.Parent = resultFrame
-        
-        local fullText = table.concat(frames, ";")
-        
-        local textBox = Instance.new("TextBox")
-        textBox.Size = UDim2.new(1, -20, 1, -80)
-        textBox.Position = UDim2.new(0, 10, 0, 40)
-        textBox.Text = fullText
-        textBox.TextWrapped = true
-        textBox.TextScaled = true
-        textBox.MultiLine = true
-        textBox.Font = Enum.Font.Code
-        textBox.BackgroundColor3 = Color3.new(0.2, 0.2, 0.2)
-        textBox.TextColor3 = Color3.new(0, 1, 0)
-        textBox.ClearTextOnFocus = false
-        textBox.Parent = resultFrame
-        
-        local copyBtn = Instance.new("TextButton")
-        copyBtn.Size = UDim2.new(0, 150, 0, 30)
-        copyBtn.Position = UDim2.new(0.5, -175, 1, -40)
-        copyBtn.Text = "Копировать в буфер"
-        copyBtn.BackgroundColor3 = Color3.new(0, 0.5, 0)
-        copyBtn.TextColor3 = Color3.new(1, 1, 1)
-        copyBtn.Parent = resultFrame
-        copyBtn.MouseButton1Click:Connect(function()
-            if setclipboard then
-                setclipboard(fullText)
-                copyBtn.Text = "Скопировано!"
-                wait(1)
-                copyBtn.Text = "Копировать в буфер"
-            else
-                copyBtn.Text = "setclipboard не доступен"
-            end
-        end)
-        
-        local closeBtn = Instance.new("TextButton")
-        closeBtn.Size = UDim2.new(0, 150, 0, 30)
-        closeBtn.Position = UDim2.new(0.5, 25, 1, -40)
-        closeBtn.Text = "Закрыть"
-        closeBtn.BackgroundColor3 = Color3.new(0.5, 0, 0)
-        closeBtn.TextColor3 = Color3.new(1, 1, 1)
-        closeBtn.Parent = resultFrame
-        closeBtn.MouseButton1Click:Connect(function()
-            resultGui:Destroy()
-        end)
-    end
-    
-    recordBtn.MouseButton1Click:Connect(startRecording)
+local ScreenGui = Instance.new("ScreenGui", Players.LocalPlayer:WaitForChild("PlayerGui"))
+ScreenGui.Name = "R6_Universal_Recorder"
+ScreenGui.ResetOnSpawn = false
+
+local Frame = Instance.new("Frame", ScreenGui)
+Frame.Size = UDim2.new(0, 300, 0, 320)
+Frame.Position = UDim2.new(0.5, -150, 0.5, -160)
+Frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+Frame.BorderSizePixel = 0
+Frame.Active = true
+Frame.Draggable = true
+
+local Title = Instance.new("TextLabel", Frame)
+Title.Size = UDim2.new(1, 0, 0, 40)
+Title.Text = "R6 LOOP DETECTOR"
+Title.TextColor3 = Color3.new(1, 1, 1)
+Title.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+Title.Font = Enum.Font.GothamBold
+
+local TargetInput = Instance.new("TextBox", Frame)
+TargetInput.PlaceholderText = "Target Username"
+TargetInput.Size = UDim2.new(0.8, 0, 0, 35)
+TargetInput.Position = UDim2.new(0.1, 0, 0.2, 0)
+TargetInput.Text = Players.LocalPlayer.Name
+
+local DurationInput = Instance.new("TextBox", Frame)
+DurationInput.PlaceholderText = "Max Sec"
+DurationInput.Size = UDim2.new(0.35, 0, 0, 35)
+DurationInput.Position = UDim2.new(0.1, 0, 0.35, 0)
+DurationInput.Text = "15"
+
+local FPSInput = Instance.new("TextBox", Frame)
+FPSInput.PlaceholderText = "FPS"
+FPSInput.Size = UDim2.new(0.35, 0, 0, 35)
+FPSInput.Position = UDim2.new(0.55, 0, 0.35, 0)
+FPSInput.Text = "30"
+
+local RecordBtn = Instance.new("TextButton", Frame)
+RecordBtn.Text = "START RECORDING"
+RecordBtn.Size = UDim2.new(0.8, 0, 0, 45)
+RecordBtn.Position = UDim2.new(0.1, 0, 0.55, 0)
+RecordBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 0)
+RecordBtn.TextColor3 = Color3.new(1, 1, 1)
+RecordBtn.Font = Enum.Font.GothamBold
+
+local CopyBtn = Instance.new("TextButton", Frame)
+CopyBtn.Text = "COPY TO CLIPBOARD"
+CopyBtn.Size = UDim2.new(0.8, 0, 0, 45)
+CopyBtn.Position = UDim2.new(0.1, 0, 0.75, 0)
+CopyBtn.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+CopyBtn.TextColor3 = Color3.new(1, 1, 1)
+CopyBtn.Visible = false
+
+local function round(num)
+	return math.floor(num * 1000 + 0.5) / 1000
 end
 
--- Создаем GUI при запуске
-createMainGUI()
+local function getFrameHash(frameData)
+	local hash = ""
+	for jointName, cf in pairs(frameData) do
+		hash = hash .. jointName .. table.concat(cf, ",")
+	end
+	return hash
+end
 
--- Горячая клавиша для открытия (F2)
-UserInputService.InputBegan:Connect(function(input, gameProcessed)
-    if not gameProcessed and input.KeyCode == Enum.KeyCode.F2 then
-        createMainGUI()
-    end
+local function record()
+	local targetName = TargetInput.Text:lower()
+	local maxDuration = tonumber(DurationInput.Text) or 15
+	local fps = tonumber(FPSInput.Text) or 30
+	local targetPlayer = nil
+	
+	for _, p in pairs(Players:GetPlayers()) do
+		if p.Name:lower():sub(1, #targetName) == targetName then
+			targetPlayer = p; break
+		end
+	end
+	
+	if not targetPlayer or not targetPlayer.Character then 
+		RecordBtn.Text = "NOT FOUND"; task.wait(1); RecordBtn.Text = "START RECORDING"; return 
+	end
+	
+	local char = targetPlayer.Character
+	local torso = char:FindFirstChild("Torso")
+	local root = char:FindFirstChild("HumanoidRootPart")
+	
+	local joints = {
+		["RootJoint"] = root:FindFirstChild("RootJoint"),
+		["Neck"] = torso:FindFirstChild("Neck"),
+		["Right Shoulder"] = torso:FindFirstChild("Right Shoulder"),
+		["Left Shoulder"] = torso:FindFirstChild("Left Shoulder"),
+		["Right Hip"] = torso:FindFirstChild("Right Hip"),
+		["Left Hip"] = torso:FindFirstChild("Left Hip")
+	}
+	
+	local frames = {}
+	local hashes = {} 
+	local stopRecording = false
+	local loopFoundIndex = nil
+	
+	RecordBtn.Text = "SCANNING FOR LOOP..."
+	RecordBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+	CopyBtn.Visible = false
+	
+	local startTime = tick()
+	local interval = 1/fps
+	local threshold = 12 
+	
+	while (tick() - startTime < maxDuration) and not stopRecording do
+		local frameData = {}
+		for name, joint in pairs(joints) do
+			if joint then
+				local x, y, z, R00, R01, R02, R10, R11, R12, R20, R21, R22 = joint.Transform:GetComponents()
+				frameData[name] = {round(x),round(y),round(z),round(R00),round(R01),round(R02),round(R10),round(R11),round(R12),round(R20),round(R21),round(R22)}
+			end
+		end
+		
+		local currentHash = getFrameHash(frameData)
+		
+		if #frames > 30 then
+			for i = 1, #frames - threshold do
+				if hashes[i] == currentHash then
+					local isMatch = true
+					loopFoundIndex = i
+					stopRecording = true
+					break
+				end
+			end
+		end
+		
+		if not stopRecording then
+			table.insert(frames, frameData)
+			table.insert(hashes, currentHash)
+		end
+		task.wait(interval)
+	end
+	
+	if stopRecording and loopFoundIndex then
+		local loopedFrames = {}
+		for i = loopFoundIndex, #frames do
+			table.insert(loopedFrames, frames[i])
+		end
+		frames = loopedFrames
+		RecordBtn.Text = "LOOP CAPTURED!"
+	else
+		RecordBtn.Text = "MAX TIME REACHED"
+	end
+	
+	lastRecordedData = HttpService:JSONEncode({FPS = fps, Frames = frames})
+	RecordBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 200)
+	CopyBtn.Visible = true
+end
+
+CopyBtn.MouseButton1Click:Connect(function()
+	if lastRecordedData ~= "" then
+		if setclipboard then
+			setclipboard(lastRecordedData)
+			CopyBtn.Text = "COPIED!"
+			task.wait(2)
+			CopyBtn.Text = "COPY TO CLIPBOARD"
+		else
+			warn("Executor doesn't support clipboard. Data in F9.")
+			print(lastRecordedData)
+		end
+	end
 end)
 
-print("Animation Stealer GUI загружен! Нажми F2 для открытия")
+RecordBtn.MouseButton1Click:Connect(record)
