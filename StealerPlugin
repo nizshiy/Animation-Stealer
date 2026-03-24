@@ -1,0 +1,123 @@
+local HttpService = game:GetService("HttpService")
+local Selection = game:GetService("Selection")
+
+local toolbar = plugin:CreateToolbar("R6 Animator V3")
+local button = toolbar:CreateButton("Open Importer", "Open R6 Animation Importer", "rbxassetid://4458901886")
+
+local widgetInfo = DockWidgetPluginGuiInfo.new(
+	Enum.InitialDockState.Float,
+	false, 
+	false,
+	300, 400,
+	250, 350
+)
+
+local widget = plugin:CreateDockWidgetPluginGui("R6_Importer_V3", widgetInfo)
+widget.Title = "R6 Animation Importer"
+
+local mainFrame = Instance.new("Frame")
+mainFrame.Size = UDim2.new(1, 0, 1, 0)
+mainFrame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+mainFrame.BorderSizePixel = 0
+mainFrame.Parent = widget
+
+local Label = Instance.new("TextLabel")
+Label.Text = "Paste JSON Data Below:"
+Label.Size = UDim2.new(1, 0, 0, 30)
+Label.TextColor3 = Color3.new(1, 1, 1)
+Label.BackgroundTransparency = 1
+Label.Font = Enum.Font.GothamSemibold
+Label.Parent = mainFrame
+
+local InputBox = Instance.new("TextBox")
+InputBox.Size = UDim2.new(0.9, 0, 0.6, 0)
+InputBox.Position = UDim2.new(0.05, 0, 0.1, 0)
+InputBox.Text = ""
+InputBox.MultiLine = true
+InputBox.ClearTextOnFocus = false
+InputBox.TextXAlignment = Enum.TextXAlignment.Left
+InputBox.TextYAlignment = Enum.TextYAlignment.Top
+InputBox.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+InputBox.TextColor3 = Color3.fromRGB(220, 220, 220)
+InputBox.Font = Enum.Font.Code
+InputBox.TextSize = 10
+InputBox.Parent = mainFrame
+
+local CreateBtn = Instance.new("TextButton")
+CreateBtn.Size = UDim2.new(0.9, 0, 0, 40)
+CreateBtn.Position = UDim2.new(0.05, 0, 0.75, 0)
+CreateBtn.Text = "CREATE KEYFRAMESEQUENCE"
+CreateBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+CreateBtn.TextColor3 = Color3.new(1, 1, 1)
+CreateBtn.Font = Enum.Font.GothamBold
+CreateBtn.Parent = mainFrame
+
+local jointToPart = {
+	["Neck"] = "Head",
+	["Right Shoulder"] = "Right Arm",
+	["Left Shoulder"] = "Left Arm",
+	["Right Hip"] = "Right Leg",
+	["Left Hip"] = "Left Leg"
+}
+
+local function createAnimation()
+	local rawData = InputBox.Text
+	if rawData == "" then return end
+
+	local success, data = pcall(function() return HttpService:JSONDecode(rawData) end)
+
+	if not success then
+		CreateBtn.Text = "JSON ERROR!"
+		CreateBtn.BackgroundColor3 = Color3.fromRGB(180, 0, 0)
+		task.wait(1.5)
+		CreateBtn.Text = "CREATE KEYFRAMESEQUENCE"
+		CreateBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+		return
+	end
+
+	local fps = data.FPS or 30
+	local keyframeSequence = Instance.new("KeyframeSequence")
+	keyframeSequence.Name = "R6_Anim_" .. os.time()
+
+	for i, frameData in ipairs(data.Frames) do
+		local keyframe = Instance.new("Keyframe")
+		keyframe.Time = (i - 1) / fps
+		keyframe.Name = "Keyframe" .. i
+		keyframe.Parent = keyframeSequence
+
+		local rootPose = Instance.new("Pose")
+		rootPose.Name = "HumanoidRootPart"
+		rootPose.Parent = keyframe
+
+		local torsoPose = Instance.new("Pose")
+		torsoPose.Name = "Torso"
+		if frameData["RootJoint"] then
+			torsoPose.CFrame = CFrame.new(unpack(frameData["RootJoint"]))
+		end
+		torsoPose.Parent = rootPose
+
+		for jointName, cfArray in pairs(frameData) do
+			if jointName ~= "RootJoint" then
+				local partName = jointToPart[jointName]
+				if partName then
+					local p = Instance.new("Pose")
+					p.Name = partName
+					p.CFrame = CFrame.new(unpack(cfArray))
+					p.Parent = torsoPose
+				end
+			end
+		end
+	end
+
+	keyframeSequence.Parent = game.Workspace
+	Selection:Set({keyframeSequence})
+
+	CreateBtn.Text = "DONE: SAVED IN WORKSPACE"
+	CreateBtn.BackgroundColor3 = Color3.fromRGB(0, 160, 0)
+	task.wait(2)
+	CreateBtn.Text = "CREATE KEYFRAMESEQUENCE"
+	CreateBtn.BackgroundColor3 = Color3.fromRGB(0, 120, 215)
+end
+
+CreateBtn.MouseButton1Click:Connect(createAnimation)
+button.Click:Connect(function() widget.Enabled = not widget.Enabled end)
